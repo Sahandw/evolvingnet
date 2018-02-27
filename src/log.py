@@ -1,8 +1,13 @@
 from datetime import datetime, timedelta
+import os
+
+project_folder = os.path.dirname(__file__).split("src")[0]
+
+
 
 class Log:
 	def __init__(self):
-		with open('data/data.txt')as f:
+		with open(project_folder + 'data/data.txt')as f:
 			self.raw_events = f.readlines()
 		f.close()
 
@@ -105,4 +110,6 @@ class Log:
 				event_snapshot[week].append(entry)
 
 		return event_snapshot
+
+
 
