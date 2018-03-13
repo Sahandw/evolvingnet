@@ -42,6 +42,7 @@ class Plot:
 		# print len(event_snapshot.keys())
 
 		plt.plot(range(1, len(data) + 1), data)
+		#plt.ylim([0,1000])
 		plt.show()
 
 
@@ -241,8 +242,8 @@ class Plot:
 
 		K = 200
 
-		samples_pr = sorted_pr[-200:]
-		samples_id = sorted_id[-200:]
+		samples_pr = sorted_pr[600:650]
+		samples_id = sorted_id[600:650]
 		samples_join = []
 		for idx in samples_id:
 			samples_join.append(x[str(idx)])
@@ -274,14 +275,14 @@ class Plot:
 
 		for i in range(K):
 			plt.plot(date_idx , pr_ev[i])
-		#plt.ylim([0,0.002])
+		plt.ylim([0,0.0005])
 		plt.show()
 
 
 
 
 
-
-p = Plot()
-p.pr_distr()
+#
+# p = Plot()
+# p.join_date_final_pagerank()
 

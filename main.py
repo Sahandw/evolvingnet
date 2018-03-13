@@ -9,7 +9,7 @@ l = Log()
 #l.create_snapshot_pickles()
 
 p = Plot()
-p.event_frequency('join', 'week')
+p.event_frequency('msg', 'week')
 
 #p.create_graph_visualizations('day')
 

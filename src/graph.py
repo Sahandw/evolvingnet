@@ -54,6 +54,11 @@ class Graph_Creator:
 				self.__create_graphml_file__(f , adj_list , c_nodes[date])
 
 			g = load_graph('temp_graph.graphml')
+
+			# for v in reversed(sorted(g.vertices())):
+			# 	if v.out_degree < 1:
+			# 		g.remove_vertex(v)
+
 			graphs[date] = g
 
 			td = 7
@@ -158,6 +163,10 @@ class Stat:
 		x = [i for i in range(len(s))]
 		plt.plot(x ,s)
 		plt.show()
+
+
+
+
 
 st = Stat('day')
 print st.degree_centrality()

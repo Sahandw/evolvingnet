@@ -139,3 +139,63 @@ class Log:
 			join_time[join[0]] = (join[1] - self.start_date).days
 		return join_time
 
+
+	def __create_user_event_sequence__(self ):
+		event_log = self.__create_log__()
+		#print event_log[0] , event_log[8870]
+		user_log = {}
+		for entry in event_log:
+			if entry[0] not in user_log:
+				user_log[entry[0]] = []
+			if entry[1] not in user_log:
+				user_log[entry[1]] = []
+			if entry[3] == '1' and entry[0] == entry[1]:
+				user_log[entry[0]].append(('j' , entry[2]))
+			else:
+				user_log[entry[0]].append(('s' ,  entry[2]))
+				user_log[entry[1]].append(('r' ,  entry[2]))
+
+		pickle.dump(user_log, open(project_folder + 'data/pickles/user_log.p', 'wb'))
+
+	def get_user_event_sequence(self):
+		return pickle.load(open(project_folder + 'data/pickles/user_log.p' , 'rb'))
+
+	def get_user_symb_sequence(self):
+		return pickle.load(open(project_folder + 'data/pickles/user_symbols_time.p' , 'rb'))
+
+	def get_user_seq(self):
+		return pickle.load(open(project_folder + 'data/pickles/user_seq.p' , 'rb'))
+
+	def __create_user_symbolic_sequence__(self):
+		user_log = self.get_user_event_sequence()
+		for user  , log  in  user_log.iteritems():
+			for i in range(len(log)):
+				j = i + 1
+				ts = 'e'
+				if j!= len(log):
+					delta = (log[j][1] - log[i][1]).seconds
+					ts = 'd'
+					if delta < 600: ts = 'a'
+					elif delta >= 600 and delta < 7200: ts = 'b'
+					elif delta >= 7200 and delta < 86400: ts = 'c'
+				log[i] = (log[i][0] , log[i][1] , ts)
+
+		pickle.dump(user_log, open(project_folder + 'data/pickles/user_symbols_time.p', 'wb'))
+
+
+
+		for user, log in user_log.iteritems():
+			l = ''
+			for entry in log:
+				l += entry[0] +  entry[2]
+			user_log[user] = l
+
+
+		pickle.dump(user_log, open(project_folder + 'data/pickles/user_seq.p', 'wb'))
+
+#
+#
+# l = Log()
+# print l.get_user_seq()['1']
+#
+#
