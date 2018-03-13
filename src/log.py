@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
 import os
-
+import pickle
 project_folder = os.path.dirname(__file__).split("src")[0]
-
 
 
 class Log:
@@ -43,7 +42,7 @@ class Log:
 		return node_log , msg_log
 
 
-	def create_join_snapshots(self , duration = 'week'):
+	def __create_join_snapshots__(self , duration = 'week'):
 		date = self.start_date
 		join_snapshot = {}
 
@@ -68,7 +67,7 @@ class Log:
 		return join_snapshot
 
 
-	def create_msg_snapshot(self , duration = 'week'):
+	def __create_msg_snapshot__(self , duration = 'week'):
 		date = self.start_date
 		msg_snapshot = {}
 		interval = timedelta(7)
@@ -90,7 +89,7 @@ class Log:
 
 		return msg_snapshot
 
-	def create_event_snapshot(self , duration = 'week'):
+	def __create_event_snapshot__(self , duration = 'week'):
 		date = self.start_date
 		event_snapshot = {}
 		interval = timedelta(7)
@@ -112,4 +111,31 @@ class Log:
 		return event_snapshot
 
 
+
+	def create_snapshot_pickles(self):
+		pickle.dump(self.__create_event_snapshot__('week') ,
+					open(project_folder + 'data/pickles/weekly_events.p' , 'wb'))
+		pickle.dump(self.__create_event_snapshot__('day'),
+					open(project_folder + 'data/pickles/daily_events.p', 'wb'))
+		pickle.dump(self.__create_join_snapshots__('week'),
+					open(project_folder + 'data/pickles/weekly_joins.p', 'wb'))
+		pickle.dump(self.__create_join_snapshots__('day'),
+					open(project_folder + 'data/pickles/daily_joins.p', 'wb'))
+		pickle.dump(self.__create_msg_snapshot__('week'),
+					open(project_folder + 'data/pickles/weekly_msgs.p', 'wb'))
+		pickle.dump(self.__create_msg_snapshot__('day'),
+					open(project_folder + 'data/pickles/daily_msgs.p', 'wb'))
+
+	def get_event_snapshot(self , dur = 'week' , type = 'event'):
+		d = 'weekly'
+		if dur == 'day': d = 'daily'
+		name = project_folder + 'data/pickles/' + d + '_' + type + 's.p'
+		return pickle.load(open(name , 'rb'))
+
+
+	def join_date_since_inception(self):
+		join_time = {}
+		for join in self.node_log:
+			join_time[join[0]] = (join[1] - self.start_date).days
+		return join_time
 

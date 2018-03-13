@@ -1,6 +1,7 @@
 from graph_tool.all import *
 import graph_tool as gt
 import graph_tool.draw as gtdraw
+import graph_tool.centrality as gtc
 from log import Log
 from datetime import timedelta
 import networkx as nx
@@ -11,100 +12,152 @@ import matplotlib.pyplot as plt
 class Graph_Creator:
 	def __init__(self , duration = 'week'):
 		log = Log()
-		self.msgs = log.create_msg_snapshot(duration)
-		self.nodes = log.create_join_snapshots(duration)
-		self.events = log.create_event_snapshot(duration)
+		self.msgs = log.get_event_snapshot(dur = duration , type = 'msg')
+		self.nodes = log.get_event_snapshot(dur = duration , type = 'join')
+		self.events = log.get_event_snapshot(dur = duration , type = 'event')
 		self.start_date = log.start_date
 		self.end_date = log.end_date
-	def create_cumulative_graph(self, start , end):
-		g = Graph(directed = False)
-		relevant_events , rel_msgs , rel_nodes = self.extract_events(start , end)
-		id = g.new_vertex_property('string')
-		id_invert = {}
-		for node in rel_nodes:
-			v = g.add_vertex()
-			id[v] = node
-			id_invert[node] = v
-		edge_set = set()
-		for msg in rel_msgs:
-			u = msg[0]
-			v = msg[1]
-			if (v , u) in rel_msgs:
-				if (v,u) not in edge_set:
-					edge_set.add((u,v))
-		for (u,v) in edge_set:
-			g.add_edge(id_invert[u] , id_invert[v])
-		return g
+		self.dur = duration
+
+	def create_cumulative_edge_list(self):
+		date = self.start_date
+		cumulative_msgs = {}
+		cumulative_msg_list = []
+		cumulative_nodes = {}
+		cumulative_node_list = []
+		while(date <= self.end_date):
+			if date in self.msgs:
+				l = [(el[0] , el[1]) for el in self.msgs[date]]
+				cumulative_msg_list += l
+			cumulative_msgs[date] = cumulative_msg_list[:]
+			if date in self.nodes:
+				l = [el[0] for el in self.nodes[date]]
+				cumulative_node_list += l
+			cumulative_nodes[date] = cumulative_node_list[:]
+
+			td = 7
+			if self.dur == 'day' : td = 1
+			date += timedelta(td)
+
+		return cumulative_msgs ,  cumulative_nodes
+
+	def create_culumative_graphs(self):
+		c_edge , c_nodes = self.create_cumulative_edge_list()
+		date = self.start_date
+		i = 0
+		graphs = {}
+		while(date <= self.end_date):
+
+			adj_list = self.__get_adj_list__( c_edge[date] )
+
+			with open('temp_graph.graphml' , 'w') as f:
+				self.__create_graphml_file__(f , adj_list , c_nodes[date])
+
+			g = load_graph('temp_graph.graphml')
+			graphs[date] = g
+
+			td = 7
+			if self.dur == 'day': td = 1
+			date += timedelta(td)
+
+		self.graphs = graphs
+		return graphs
+
+	def __create_graphml_file__(self, f , edges , nodes):
+		f.write('<?xml version=\"1.0\" encoding=\"UTF-8\"?> ' +
+				'<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\" ' +
+				'xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" ' +
+				'xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns' +
+				'http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd\">\n'+
+				'<key id=\"d0\" for=\"node\" attr.name=\"id\" attr.type=\"string\"/> \n' +
+				'<graph id=\"G\" edgedefault=\"undirected\">\n')
+
+
+		for node in nodes:
+			f.write('<node id = \"' + node + '\">\n'+
+					'\t<data key = \"d0\">' + node + '</data> \n</node>\n')
+		for edge in edges:
+			f.write('<edge source = \"'+ edge[0] + '\" target = \"'+ edge[1] + '\" /> \n')
+
+
+	def __get_adj_list__(self , l):
+		undir_set = set()
+		dir_set = set(l)
+		for item in dir_set:
+			if (item[1] , item[0]) in dir_set:
+				if item[0] < item[1]:
+					undir_set.add(item)
+				else:
+					undir_set.add((item[1] , item[0]))
+		return list(undir_set)
+
+
+	def create_id_invert(self):
+		self.id_invert = {}
+		g = self.graphs[self.end_date]
+		id = g.vertex_properties['id']
+		for v in g.vertices():
+			self.id_invert[id[v]] = v
+
+
+
+gc = Graph_Creator('week')
+
+#print gc.create_culumative_graphs()
+
+
+
+#gc.create_node_edge_list_for_snapshots()
 
 
 
 
-	def extract_events(self, start , end):
-		relevant_dates = []
-		for key in sorted(self.events.keys()):
-			if key <= end and key >= start:
-				relevant_dates.append(key)
-		relevant_events = []
-		relevant_msgs = []
-		relevant_nodes  = []
-		for key in relevant_dates:
-			relevant_events += self.events[key]
-			relevant_nodes += self.nodes[key]
-			relevant_msgs += self.msgs[key]
+class Stat:
+	def __init__(self , dur = 'week'):
+		gc = Graph_Creator(dur)
+		self.graphs = gc.create_culumative_graphs()
 
-		rel_nodes = [] # no timestamp
-		rel_msgs = [] # no timestamp
-		for item in relevant_nodes:
-			rel_nodes.append(item[0])
-		for item in relevant_msgs:
-			rel_msgs.append((item[0] , item[1]))
-
-		return relevant_events , rel_msgs , rel_nodes
-
-
-
-	def create_node_edge_list_for_snapshots(self):
-		graph_nodes = {}
-		graph_edges = {}
-		dates = []
-		for date in sorted(self.events.iterkeys()):
-			dates.append(date)
-		temp = []
+	def pagerank(self ):
+		pr = {}
+		dates = sorted(self.graphs.iterkeys())
+		i = 0
 		for date in dates:
-			temp += self.nodes[date]
-			graph_nodes[date] = temp[:]
-		print graph_nodes[self.start_date + timedelta(7)]
-		for key,items in graph_nodes.iteritems():
-			new_items = []
-			for item in items:
-				new_items.append(item[0])
-			graph_nodes[key] = new_items
-		print graph_nodes[self.start_date + timedelta(21)]
+			if self.graphs[date].num_vertices() > 0:
+				pr[date] = gtc.pagerank(self.graphs[date])
+		return pr
 
-		temp = []
+	def degree_centrality(self):
+		dc = {}
+		dates = sorted(self.graphs.iterkeys())
+		i = 0
 		for date in dates:
-			temp += self.msgs[date]
-			graph_edges[date] = temp[:]
-		print graph_edges[self.start_date + timedelta(21)]
-		for key, items in graph_edges.iteritems():
-			new_items = []
-			for item in items:
-				new_items.append((item[0], item[1]))
-				graph_edges[key] = new_items
-
-		for key,items in graph_edges.iteritems():
-			new_items = set()
-			for item in items:
-				if (item[1] , item[0]) in items:
-					new_items.add(tuple(sorted([item[0],item[1]])))
-					graph_edges[key] = new_items
-
-
-		print graph_edges[self.start_date + timedelta(21)]
+			if self.graphs[date].num_vertices() > 0:
+				dc[date] = self.graphs[date].degree_property_map('total')
+		return dc
 
 
 
+	def test(self):
+		pr = self.pagerank()
+		dates = sorted(pr.iterkeys())
+		s = []
 
+		for date in dates:
+			try:
+				g = self.graphs[date]
+				rank = pr[date]
+				print rank[g.vertex(777)]
+				id = g.vertex_properties['id']
+				graphmlid = g.vertex_properties['_graphml_vertex_id']
+				print(id[g.vertex(0)])
+				print(graphmlid[g.vertex(0)])
+				s.append(rank[1677])
+			except Exception as e:
+				continue
 
-gc = Graph_Creator()
-gc.create_node_edge_list_for_snapshots()
+		x = [i for i in range(len(s))]
+		plt.plot(x ,s)
+		plt.show()
+
+st = Stat('day')
+print st.degree_centrality()
