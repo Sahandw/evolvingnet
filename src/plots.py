@@ -242,8 +242,8 @@ class Plot:
 
 		K = 200
 
-		samples_pr = sorted_pr[600:650]
-		samples_id = sorted_id[600:650]
+		samples_pr = sorted_pr[-20:] + sorted_pr[650:660]
+		samples_id = sorted_id[-20:] + sorted_id[650:660]
 		samples_join = []
 		for idx in samples_id:
 			samples_join.append(x[str(idx)])
@@ -275,14 +275,14 @@ class Plot:
 
 		for i in range(K):
 			plt.plot(date_idx , pr_ev[i])
-		plt.ylim([0,0.0005])
+		plt.ylim([0,0.01])
 		plt.show()
 
 
 
 
 
-#
-# p = Plot()
-# p.join_date_final_pagerank()
+
+p = Plot()
+p.ten_top()
 

@@ -119,8 +119,25 @@ gc = Graph_Creator('week')
 
 class Stat:
 	def __init__(self , dur = 'week'):
-		gc = Graph_Creator(dur)
+		self.gc = Graph_Creator(dur)
 		self.graphs = gc.create_culumative_graphs()
+
+	def user_pagerank(self):
+		pr = {}
+		last_graph = self.graphs[self.gc.end_date]
+		id = last_graph.vertex_properties['id']
+		prg = self.pagerank()
+		for date , prank in prg.iteritems():
+			temp = {}
+			g = self.graphs[date]
+			for v in g.vertices():
+				temp[id[v]] = prank[v]
+			pr[date] = temp
+		return pr
+
+
+
+
 
 	def pagerank(self ):
 		pr = {}
@@ -168,5 +185,5 @@ class Stat:
 
 
 
-st = Stat('day')
-print st.degree_centrality()
+# st = Stat('day')
+# st.user_pagerank()
