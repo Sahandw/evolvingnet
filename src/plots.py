@@ -355,7 +355,89 @@ class Plot:
 		plt.show()
 
 
+	def msg_sent_received_user_dstr(self):
+		seq = self.log.get_user_seq()
+		s_count = []
+		r_count = []
+		for user in seq:
+			c = Counter(seq[user])
+			s_count.append(c['s'])
+			r_count.append(c['r'])
+
+		sc = Counter(s_count)
+		rc = Counter(r_count)
+		sx = []
+		sfreq = []
+		rx = []
+		rfreq = []
+		rcfreq = []
+		scfreq = []
+		for x,freq in sc.iteritems():
+			sx.append(x)
+			sfreq.append(freq)
+		for x, freq in rc.iteritems():
+			rx.append(x)
+			rfreq.append(freq )
+
+		plt.plot(np.log(sx),np.log(sfreq) , 'r.')
+		plt.show()
+		plt.plot(np.log(rx),np.log(rfreq), 'r.')
+		plt.show()
+
+		for i in range(len(sfreq)):
+			if i == 0:
+				scfreq.append( sfreq[i])
+			else:
+				scfreq.append(sfreq[i] + scfreq[i-1])
+
+		for i in range(len(rfreq)):
+			if i == 0:
+				rcfreq.append(rfreq[i])
+			else:
+				rcfreq.append(rfreq[i] + rcfreq[i-1])
+
+		plt.plot(np.log(sx), 1 - np.log(scfreq), 'r.')
+		plt.show()
+		plt.plot(np.log(rx), 1 - np.log(rcfreq), 'r.')
+		plt.show()
+
+	def pr_msg_received(self , type = 'r'):
+		spcorr = {}
+		corr = {}
+		st = Stat()
+		rank = st.get_users_rank()
+		seq = self.log.get_user_date_seq()
+		for date in seq.iterkeys():
+			weekly_rank = []
+			weekly_r_count = []
+			for user in seq[date].iterkeys():
+				if date != self.log.end_date:
+					if user in rank[date]:
+						weekly_rank.append(rank[date].index(user) + 1)
+						weekly_r_count.append(Counter(
+							seq[date + timedelta(7)][user])[type])
+			if weekly_r_count != [] and weekly_rank != []:
+				corr[date] = stats.pearsonr(weekly_rank , weekly_r_count)
+				spcorr[date] = stats.spearmanr(weekly_rank, weekly_r_count)
+
+		x = []
+		y = []
+		for date in sorted(corr.iterkeys()):
+			x.append((date - self.log.start_date).days)
+			y.append(corr[date][0])
+
+		plt.plot(x,y , 'r.')
+		plt.show()
+
+		x = []
+		y = []
+		for date in sorted(spcorr.iterkeys()):
+			x.append((date - self.log.start_date).days)
+			y.append(spcorr[date][0])
+
+		plt.plot(x, y, 'r.')
+		plt.show()
 
 
 p = Plot()
-p.ten_top_rank()
+p.pr_msg_received()

@@ -3,7 +3,7 @@ from log import Log
 from collections import Counter
 import numpy as np
 from graph import Stat
-from sklearn.model_selection import train_test_split , cross_val_score
+from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import Ridge , LogisticRegression
 import matplotlib.pyplot as plt
@@ -14,6 +14,7 @@ import xgboost as xgb
 from sklearn.neural_network import MLPClassifier , MLPRegressor
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.decomposition import PCA
+from datetime import timedelta
 
 
 class Sequence:
@@ -84,7 +85,6 @@ class Sequence:
 	def __create_training_test_set(self):
 		X, y = self.__create_cumulative_design_matrix__()
 		X , y = self.clean_data(X,y)
-		X = self.dimentionality_reduction(X)
 		return train_test_split(X,y,test_size=0.2 ,shuffle=True)
 
 
@@ -92,9 +92,10 @@ class Sequence:
 		# X , y = self.__create_cumulative_design_matrix__()
 		# print cross_val_score(model , X, y , cv = 10 , scoring='neg_mean_absolute_error' )
 		X, testX , y, testy = self.__create_training_test_set()
+		X, testX = self.dimentionality_reduction(X, testX)
 		print X.shape , y.shape, testX.shape, testy.shape
 		model = Ridge()
-		#model = KernelRidge()
+		#model = KernelRidge(kernel='rbf')
 		model.fit(X,y)
 		pred = model.predict(testX)
 		print mean_absolute_error(testy, pred )
@@ -106,6 +107,10 @@ class Sequence:
 		plt.plot([i for i in range(len(testy))], testy, 'b.')
 		plt.show()
 
+		plt.plot([i for i in range (len(testy))], stats.rankdata(pred,'min')
+				 					- stats.rankdata(testy,'min') )
+		print stats.spearmanr(stats.rankdata(pred,'min') , stats.rankdata(testy,'min'))
+		plt.show()
 
 	def classification_data(self):
 		X, y = self.__create_cumulative_design_matrix__()
@@ -122,16 +127,16 @@ class Sequence:
 					y[i] = j
 					break
 		print per
-		X = self.dimentionality_reduction(X)
 		return train_test_split(X, y, test_size=0.2, shuffle=True)
 
-	def dimentionality_reduction(self , X , y = None):
+	def dimentionality_reduction(self , X , testX):
 		model = PCA(n_components=40)
 		model.fit(X)
-		return model.transform(X)
+		return model.transform(X) , model.transform(testX)
 
 	def classify_pr(self):
 		X, testX, y, testy = self.classification_data()
+		X , testX = self.dimentionality_reduction(X,testX)
 		model = RandomForestClassifier(n_estimators=400 , max_depth= 15,
 									   min_samples_split = 5)
 		# model = LogisticRegression(multi_class='')
@@ -142,28 +147,49 @@ class Sequence:
 		print np.mean(np.array(pred2) == np.array(y))
 		print np.mean(np.array(pred) == np.array(testy))
 
-		# xg_train = xgb.DMatrix(X, label=y)
-		# xg_test = xgb.DMatrix(testX, label=testy)
-		# # setup parameters for xgboost
-		# param = {}
-		# # use softmax multi-class classification
-		# param['objective'] = 'multi:softmax'
-		# # scale weight of positive examples
-		# param['eta'] = 0.1
-		# param['max_depth'] = 6
-		# param['silent'] = 1
-		# param['nthread'] = 4
-		# param['num_class'] = 4
-		#
-		# watchlist = [(xg_train, 'train'), (xg_test, 'test')]
-		# num_round = 5
-		# bst = xgb.train(param, xg_train, num_round, watchlist)
-		# # get prediction
-		# pred = bst.predict(xg_test)
-		# print np.mean(np.array(pred) == np.array(testy))
+	# xg_train = xgb.DMatrix(X, label=y)
+	# xg_test = xgb.DMatrix(testX, label=testy)
+	# # setup parameters for xgboost
+	# param = {}
+	# # use softmax multi-class classification
+	# param['objective'] = 'multi:softmax'
+	# # scale weight of positive examples
+	# param['eta'] = 0.1
+	# param['max_depth'] = 6
+	# param['silent'] = 1
+	# param['nthread'] = 4
+	# param['num_class'] = 4
+	#
+	# watchlist = [(xg_train, 'train'), (xg_test, 'test')]
+	# num_round = 5
+	# bst = xgb.train(param, xg_train, num_round, watchlist)
+	# # get prediction
+	# pred = bst.predict(xg_test)
+	# print np.mean(np.array(pred) == np.array(testy))
 
+
+	def create_weekly_sequences(self , k = 5):
+		seq = self.log.get_user_date_seq()
+		kgram_set = set()
+		kgram_count = {}
+		for date , user_seq in seq.iteritems():
+			kgram_count[date] = {}
+			for user in user_seq:
+				kgrams = ngrams(user_seq[user] , k)
+				l = []
+				for gram in kgrams:
+					if (gram[0] == 'r' or gram[0] == 's' or gram[0] == 'j' ) \
+							and 'e' not in gram:
+						kgram_set.add(gram)
+						l.append(gram)
+				kgram_count[date][user] = Counter(l)
+
+		return sorted(list(kgram_set)) , kgram_count
 
 
 s = Sequence()
-s.classify_pr()
+# print s.create_weekly_sequences()[1]\
+# 			[s.log.start_date + timedelta(7 * 12)]['1']
+
 s.predict_pagerank()
+s.classify_pr()
