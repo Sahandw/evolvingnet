@@ -193,9 +193,48 @@ class Log:
 
 		pickle.dump(user_log, open(project_folder + 'data/pickles/user_seq.p', 'wb'))
 
-#
-#
-# l = Log()
-# print l.get_user_seq()['1']
-#
-#
+
+
+
+
+	def create_user_cumulative_events(self , dur = 'week'):
+		event_sequence = self.get_user_event_sequence()
+		user_ce = {}
+		d = 1
+		if dur == 'week':
+			d = 7
+		date = self.start_date
+		while date <= self.end_date:
+			user_ce[date] = {}
+			for user in event_sequence.iterkeys():
+				if date == self.start_date:
+					user_ce[date][user] = []
+				else: user_ce[date][user] = user_ce[date - timedelta(d)][user]
+			for user , user_events in event_sequence.iteritems():
+				for e in user_events:
+					day = e[1].replace(hour=00, minute=00, second=00)
+					week = (e[1] - timedelta(e[1].weekday())).replace(hour=00, minute=00, second=00)
+					if dur == 'day' and day == date:
+						user_ce[date][user].append((e[0],e[1]))
+					if dur == 'week' and week == date:
+						user_ce[date][user].append((e[0],e[1]))
+
+			date += timedelta(d)
+		if dur == 'week':
+			pickle.dump(user_ce, open(project_folder + 'data/pickles/user_ce_weekly.p', 'wb'))
+		else:
+			pickle.dump(user_ce,open(project_folder + 'data/pickles/user_ce_daily.p', 'wb'))
+
+	def get_user_cumulative_events(self , dur = 'week'):
+		if dur == 'week':
+			return pickle.load(open(project_folder + 'data/pickles/user_ce_weekly.p', 'rb'))
+		else:
+			return pickle.load(open(project_folder + 'data/pickles/user_ce_daily.p', 'rb'))
+
+l = Log()
+# print l.get_user_cumulative_events('day')
+print l.get_user_cumulative_events('week')
+
+
+
+
