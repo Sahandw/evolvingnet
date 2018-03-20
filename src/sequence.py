@@ -9,6 +9,8 @@ from sklearn.linear_model import Ridge
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_absolute_error
 
+from scipy import stats
+
 
 class Sequence:
 	def __init__(self):
@@ -72,13 +74,30 @@ class Sequence:
 		model = Ridge()
 		model.fit(X,y)
 		pred = model.predict(testX)
+		newpred = []
+		newtest = []
+		for i in range(len(pred)):
+			if testy[i] > 0.0001:
+				newpred.append(pred[i])
+				newtest.append(testy[i])
+		print(len(newpred), len(newtest))
+
 		print mean_absolute_error(testy, pred )
 		print np.dot(testy , pred) / (np.linalg.norm(testy) * np.linalg.norm(pred))
 		print np.min(y) , np.max(y)
 		plt.plot([i for i in range(len(testy))], pred , 'r.')
 		plt.plot([i for i in range(len(testy))], testy, 'b.')
+
+
+		#print(stats.spearmanr(np.argsort(newpred) , np.argsort(newtest)))
 		plt.show()
 
+		print mean_absolute_error(newtest, newpred)
+		print np.dot(newtest, newpred) / (np.linalg.norm(newtest) * np.linalg.norm(newpred))
+		print np.min(newtest), np.max(newtest)
+		plt.plot([i for i in range(len(newtest))], newpred, 'r.')
+		plt.plot([i for i in range(len(newtest))], newtest, 'b.')
+		plt.show()
 
-# s = Sequence()
-# s.predict_pagerank()
+s = Sequence()
+s.predict_pagerank()

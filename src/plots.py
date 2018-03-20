@@ -240,10 +240,10 @@ class Plot:
 		sorted_pr = sorted(pr_dict.values())
 		sorted_id = sorted(pr_dict, key=pr_dict.get)
 
-		K = 200
+		K = 10
 
-		samples_pr = sorted_pr[-20:] + sorted_pr[650:660]
-		samples_id = sorted_id[-20:] + sorted_id[650:660]
+		samples_pr = sorted_pr[20:30]
+		samples_id = sorted_id[20:30]
 		samples_join = []
 		for idx in samples_id:
 			samples_join.append(x[str(idx)])
@@ -275,7 +275,8 @@ class Plot:
 
 		for i in range(K):
 			plt.plot(date_idx , pr_ev[i])
-		plt.ylim([0,0.01])
+			#print pr_ev[i]
+		#plt.ylim([0,0.0002])
 		plt.show()
 
 
@@ -284,5 +285,5 @@ class Plot:
 
 
 p = Plot()
-p.ten_top()
+p.pr_distr()
 
