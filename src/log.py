@@ -193,9 +193,184 @@ class Log:
 
 		pickle.dump(user_log, open(project_folder + 'data/pickles/user_seq.p', 'wb'))
 
-#
-#
-# l = Log()
-# print l.get_user_seq()['1']
-#
-#
+
+
+
+
+	def create_user_cumulative_events(self , dur = 'week'):
+		event_sequence = self.get_user_event_sequence()
+		user_ce = {}
+		d = 1
+		if dur == 'week':
+			d = 7
+		date = self.start_date
+		while date <= self.end_date:
+			user_ce[date] = {}
+			for user in event_sequence.iterkeys():
+				if date == self.start_date:
+					user_ce[date][user] = []
+				else: user_ce[date][user] = user_ce[date - timedelta(d)][user][:]
+			for user , user_events in event_sequence.iteritems():
+				for e in user_events:
+					day = e[1].replace(hour=00, minute=00, second=00)
+					week = (e[1] - timedelta(e[1].weekday())).replace(hour=00, minute=00, second=00)
+					if dur == 'day' and day == date:
+						user_ce[date][user].append((e[0],e[1]))
+					if dur == 'week' and week == date:
+						user_ce[date][user].append((e[0],e[1]))
+
+			date += timedelta(d)
+		if dur == 'week':
+			pickle.dump(user_ce, open(project_folder + 'data/pickles/user_ce_weekly.p', 'wb'))
+		else:
+			pickle.dump(user_ce,open(project_folder + 'data/pickles/user_ce_daily.p', 'wb'))
+
+	def get_user_cumulative_events(self , dur = 'week'):
+		if dur == 'week':
+			return pickle.load(open(project_folder + 'data/pickles/user_ce_weekly.p', 'rb'))
+		else:
+			return pickle.load(open(project_folder + 'data/pickles/user_ce_daily.p', 'rb'))
+
+
+	def create_user_cumulative_seq(self, dur = 'week'):
+		if dur == 'week':
+			ce = pickle.load(open(project_folder + 'data/pickles/user_ce_weekly.p', 'rb'))
+		else:
+			ce = pickle.load(open(project_folder + 'data/pickles/user_ce_daily.p', 'rb'))
+		user_cs = {}
+		for date in ce.iterkeys():
+			user_cs [date] = {}
+			for user in ce[date].iterkeys():
+				user_cs[date][user] = ""
+			for user in ce[date].iterkeys():
+				for i , e in enumerate(ce[date][user]):
+					j = i + 1
+					ts = 'e'
+					if j != len(ce[date][user]):
+						delta = (ce[date][user][j][1] - ce[date][user][i][1]).seconds
+						ts = 'd'
+						if delta < 600:
+							ts = 'a'
+						elif delta >= 600 and delta < 7200:
+							ts = 'b'
+						elif delta >= 7200 and delta < 86400:
+							ts = 'c'
+					user_cs[date][user] += e[0]
+					user_cs[date][user] += ts
+		if dur == 'week':
+			pickle.dump(user_cs, open(project_folder + 'data/pickles/user_cs_weekly.p', 'wb'))
+		else:
+			pickle.dump(user_cs,open(project_folder + 'data/pickles/user_cs_daily.p', 'wb'))
+
+	def get_user_cumulative_seq(self , dur = 'week'):
+		if dur == 'week':
+			return pickle.load(open(project_folder + 'data/pickles/user_cs_weekly.p', 'rb'))
+		else:
+			return pickle.load(open(project_folder + 'data/pickles/user_cs_daily.p', 'rb'))
+
+
+
+	def create_user_date_events(self,dur = 'week'):
+		event_sequence = self.get_user_event_sequence()
+		user_ce = {}
+		d = 1
+		if dur == 'week':
+			d = 7
+		date = self.start_date
+		while date <= self.end_date:
+			user_ce[date] = {}
+			for user in event_sequence.iterkeys():
+				user_ce[date][user] = []
+			for user, user_events in event_sequence.iteritems():
+				for e in user_events:
+					day = e[1].replace(hour=00, minute=00, second=00)
+					week = (e[1] - timedelta(e[1].weekday())).replace(hour=00, minute=00, second=00)
+					if dur == 'day' and day == date:
+						user_ce[date][user].append((e[0], e[1]))
+					if dur == 'week' and week == date:
+						user_ce[date][user].append((e[0], e[1]))
+			date += timedelta(d)
+		if dur == 'week':
+			pickle.dump(user_ce, open(project_folder + 'data/pickles/user_de_weekly.p', 'wb'))
+		else:
+			pickle.dump(user_ce, open(project_folder + 'data/pickles/user_de_daily.p', 'wb'))
+
+	def get_user_date_events(self, dur='week'):
+		if dur == 'week':
+			return pickle.load(open(project_folder + 'data/pickles/user_de_weekly.p', 'rb'))
+		else:
+			return pickle.load(open(project_folder + 'data/pickles/user_de_daily.p', 'rb'))
+
+
+
+	def create_user_date_seq(self,dur = 'week'):
+		ce = self.get_user_date_events(dur)
+		user_cs = {}
+		for date in ce.iterkeys():
+			user_cs [date] = {}
+			for user in ce[date].iterkeys():
+				user_cs[date][user] = ""
+			for user in ce[date].iterkeys():
+				for i , e in enumerate(ce[date][user]):
+					j = i + 1
+					ts = 'e'
+					if j != len(ce[date][user]):
+						delta = (ce[date][user][j][1] - ce[date][user][i][1]).seconds
+						ts = 'd'
+						if delta < 600:
+							ts = 'a'
+						elif delta >= 600 and delta < 7200:
+							ts = 'b'
+						elif delta >= 7200 and delta < 86400:
+							ts = 'c'
+					user_cs[date][user] += e[0]
+					user_cs[date][user] += ts
+		if dur == 'week':
+			pickle.dump(user_cs, open(project_folder + 'data/pickles/user_ds_weekly.p', 'wb'))
+		else:
+			pickle.dump(user_cs,open(project_folder + 'data/pickles/user_ds_daily.p', 'wb'))
+
+	def get_user_date_seq(self, dur='week'):
+		if dur == 'week':
+			return pickle.load(open(project_folder + 'data/pickles/user_ds_weekly.p', 'rb'))
+		else:
+			return pickle.load(open(project_folder + 'data/pickles/user_ds_daily.p', 'rb'))
+
+
+
+		if dur == 'week':
+			ce = pickle.load(open(project_folder + 'data/pickles/user_ce_weekly.p', 'rb'))
+		else:
+			ce = pickle.load(open(project_folder + 'data/pickles/user_ce_daily.p', 'rb'))
+		user_cs = {}
+		for date in ce.iterkeys():
+			user_cs [date] = {}
+			for user in ce[date].iterkeys():
+				user_cs[date][user] = ""
+			for user in ce[date].iterkeys():
+				for i , e in enumerate(ce[date][user]):
+					j = i + 1
+					ts = 'e'
+					if j != len(ce[date][user]):
+						delta = (ce[date][user][j][1] - ce[date][user][i][1]).seconds
+						ts = 'd'
+						if delta < 600:
+							ts = 'a'
+						elif delta >= 600 and delta < 7200:
+							ts = 'b'
+						elif delta >= 7200 and delta < 86400:
+							ts = 'c'
+					user_cs[date][user] += e[0]
+					user_cs[date][user] += ts
+		if dur == 'week':
+			pickle.dump(user_cs, open(project_folder + 'data/pickles/user_cs_weekly.p', 'wb'))
+		else:
+			pickle.dump(user_cs,open(project_folder + 'data/pickles/user_cs_daily.p', 'wb'))
+
+
+#l = Log()
+
+
+
+
+

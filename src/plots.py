@@ -114,27 +114,39 @@ class Plot:
 
 
 	def pr_distr(self):
-		x = self.log.join_date_since_inception()
 		st = Stat()
 		pr = st.pagerank()[self.log.end_date]
 		graph = st.graphs[self.log.end_date]
-		id = graph.vertex_properties['id']
 		pr_list = []
 		for v in graph.vertices():
 			pr_list.append(float("{0:.5f}".format(pr[v])))
 		count = Counter(pr_list)
 		x = []
 		y = []
-		for key, item in count.iteritems():
+		for key in sorted(count.iterkeys()):
 			x.append(key)
-			y.append(item)
+			y.append(count[key])
 		plt.plot(x,y, 'r.')
 		plt.ylim([0,200])
 		plt.show()
 
+		plt.plot(np.log(x), np.log(y), 'r.')
+		plt.ylim([0, np.log(200)])
+		plt.show()
 
 
+		cdf =[y[0]]
+		for i in range(1 ,len(y)):
+			cdf.append(cdf[i - 1] + y[i])
 
+		plt.plot(x, cdf , 'r.')
+		plt.show()
+
+		plt.plot(np.log(x), np.log(cdf), 'r.')
+		plt.show()
+
+		plt.plot(np.log(x), 1 - np.log(np.array(cdf)), 'r.')
+		plt.show()
 
 	def join_final_date_avg_pagerank(self):
 		x = self.log.join_date_since_inception()
@@ -280,10 +292,154 @@ class Plot:
 		plt.show()
 
 
+	def ten_top_rank(self):
+		x = self.log.join_date_since_inception()
+		st = Stat()
+		pr = st.pagerank()[self.log.end_date]
+		graph = st.graphs[self.log.end_date]
+		id = graph.vertex_properties['id']
+		id_invert = {}
+		for v in graph.vertices():
+			id_invert[id[v]] = int(v)
+		print id_invert
+
+		pr_dict = {}
+		for v in graph.vertices():
+			pr_dict[int(id[v])] = pr[v]
+
+		sorted_pr = sorted(pr_dict.values())
+		sorted_id = sorted(pr_dict, key=pr_dict.get)
+
+		K = 10
+
+		# samples_pr = sorted_pr[-K:]
+		# samples_id = sorted_id[-K:]
+		samples_pr = sorted_pr[1800 - K: 1800]
+		samples_id = sorted_id[1800 - K: 1800]
+		# samples_pr = sorted_pr[1000 - K: 1000]
+		# samples_id = sorted_id[1000 - K: 1000]
+		# samples_pr = sorted_pr[800 - K: 800]
+		# samples_id = sorted_id[800 - K: 800]
+
+		samples_join = []
+		for idx in samples_id:
+			samples_join.append(x[str(idx)])
 
 
+		print samples_pr
+		print samples_join
+		print samples_id
+
+		rank = st.get_users_rank()
+		date_idx = []
+		pr_ev = []
+		for i in range(K):
+			pr_ev.append([])
+		date = self.log.start_date
+		while date < self.log.end_date:
+			date_idx.append((date - self.log.start_date).days)
+			for i in range(K):
+				try:
+					pr_ev[i].append(
+						rank[date].index(str(samples_id[i])) + 1)
+				except:
+					pr_ev[i].append(0)
+			date +=  timedelta(1)
+
+		for i in range(K):
+			l = []
+			date_idx_temp = []
+			for j in range(len(pr_ev[i])):
+				if pr_ev[i][j] != 0:
+					l.append(pr_ev[i][j])
+					date_idx_temp.append(date_idx[j])
+			plt.plot(date_idx_temp, l)
+		plt.show()
+
+
+	def msg_sent_received_user_dstr(self):
+		seq = self.log.get_user_seq()
+		s_count = []
+		r_count = []
+		for user in seq:
+			c = Counter(seq[user])
+			s_count.append(c['s'])
+			r_count.append(c['r'])
+
+		sc = Counter(s_count)
+		rc = Counter(r_count)
+		sx = []
+		sfreq = []
+		rx = []
+		rfreq = []
+		rcfreq = []
+		scfreq = []
+		for x,freq in sc.iteritems():
+			sx.append(x)
+			sfreq.append(freq)
+		for x, freq in rc.iteritems():
+			rx.append(x)
+			rfreq.append(freq )
+
+		plt.plot(np.log(sx),np.log(sfreq) , 'r.')
+		plt.show()
+		plt.plot(np.log(rx),np.log(rfreq), 'r.')
+		plt.show()
+
+		for i in range(len(sfreq)):
+			if i == 0:
+				scfreq.append( sfreq[i])
+			else:
+				scfreq.append(sfreq[i] + scfreq[i-1])
+
+		for i in range(len(rfreq)):
+			if i == 0:
+				rcfreq.append(rfreq[i])
+			else:
+				rcfreq.append(rfreq[i] + rcfreq[i-1])
+
+		plt.plot(np.log(sx), 1 - np.log(scfreq), 'r.')
+		plt.show()
+		plt.plot(np.log(rx), 1 - np.log(rcfreq), 'r.')
+		plt.show()
+
+	def pr_msg_received(self , type = 'r'):
+		spcorr = {}
+		corr = {}
+		st = Stat()
+		rank = st.get_users_rank()
+		seq = self.log.get_user_date_seq()
+		for date in seq.iterkeys():
+			weekly_rank = []
+			weekly_r_count = []
+			for user in seq[date].iterkeys():
+				if date != self.log.end_date:
+					if user in rank[date]:
+						weekly_rank.append(rank[date].index(user) + 1)
+						weekly_r_count.append(Counter(
+							seq[date + timedelta(7)][user])[type])
+			if weekly_r_count != [] and weekly_rank != []:
+				corr[date] = stats.pearsonr(weekly_rank , weekly_r_count)
+				spcorr[date] = stats.spearmanr(weekly_rank, weekly_r_count)
+
+		x = []
+		y = []
+		for date in sorted(corr.iterkeys()):
+			x.append((date - self.log.start_date).days)
+			y.append(corr[date][0])
+
+		plt.plot(x,y , 'r.')
+		plt.show()
+
+		x = []
+		y = []
+		for date in sorted(spcorr.iterkeys()):
+			x.append((date - self.log.start_date).days)
+			y.append(spcorr[date][0])
+
+		plt.plot(x, y, 'r.')
+		plt.show()
 
 
 p = Plot()
-p.pr_distr()
-
+p.pr_msg_received()

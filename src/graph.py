@@ -136,16 +136,26 @@ class Stat:
 		return pr
 
 
+	def get_users_rank(self):
+		rank = {}
+		prg = self.user_pagerank()
+		for date , pr in prg.iteritems():
+			date_rank = sorted(pr, key=pr.get, reverse=True )
+			rank[date] = date_rank
+		return rank
+
+
+
 
 
 
 	def pagerank(self ):
 		pr = {}
 		dates = sorted(self.graphs.iterkeys())
-		i = 0
 		for date in dates:
 			if self.graphs[date].num_vertices() > 0:
 				pr[date] = gtc.pagerank(self.graphs[date])
+		self.pr = pr
 		return pr
 
 	def degree_centrality(self):
@@ -186,4 +196,4 @@ class Stat:
 
 
 # st = Stat('day')
-# st.user_pagerank()
+# st.get_users_rank()
