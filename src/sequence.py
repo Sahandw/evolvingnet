@@ -16,6 +16,8 @@ from sklearn.kernel_ridge import KernelRidge
 from sklearn.decomposition import PCA
 from datetime import timedelta
 
+from scipy import stats
+
 
 class Sequence:
 	def __init__(self):
@@ -98,6 +100,14 @@ class Sequence:
 		#model = KernelRidge(kernel='rbf')
 		model.fit(X,y)
 		pred = model.predict(testX)
+		newpred = []
+		newtest = []
+		for i in range(len(pred)):
+			if testy[i] > 0.0001:
+				newpred.append(pred[i])
+				newtest.append(testy[i])
+		print(len(newpred), len(newtest))
+
 		print mean_absolute_error(testy, pred )
 		print np.dot(testy , pred) / (np.linalg.norm(testy) * np.linalg.norm(pred))
 		print np.min(y) , np.max(y)
@@ -105,7 +115,19 @@ class Sequence:
 		print stats.spearmanr(pred,testy)
 		plt.plot([i for i in range(len(testy))], pred , 'r.')
 		plt.plot([i for i in range(len(testy))], testy, 'b.')
+
+
+		#print(stats.spearmanr(np.argsort(newpred) , np.argsort(newtest)))
 		plt.show()
+
+
+		print mean_absolute_error(newtest, newpred)
+		print np.dot(newtest, newpred) / (np.linalg.norm(newtest) * np.linalg.norm(newpred))
+		print np.min(newtest), np.max(newtest)
+		plt.plot([i for i in range(len(newtest))], newpred, 'r.')
+		plt.plot([i for i in range(len(newtest))], newtest, 'b.')
+		plt.show()
+
 
 		plt.plot([i for i in range (len(testy))], stats.rankdata(pred,'min')
 				 					- stats.rankdata(testy,'min') )
@@ -195,3 +217,4 @@ s = Sequence()
 
 s.predict_pagerank()
 s.classify_pr()
+
