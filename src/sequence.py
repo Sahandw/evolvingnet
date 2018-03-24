@@ -215,6 +215,7 @@ s = Sequence()
 # print s.create_weekly_sequences()[1]\
 # 			[s.log.start_date + timedelta(7 * 12)]['1']
 
-s.predict_pagerank()
-s.classify_pr()
+# s.predict_pagerank()
+# s.classify_pr()
 
+print(s.create_weekly_sequences()[1][s.log.start_date])

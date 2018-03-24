@@ -441,5 +441,91 @@ class Plot:
 		plt.show()
 
 
+
+	def top_ten_change_in_pr(self):
+		x = self.log.join_date_since_inception()
+		st = Stat()
+		pr = st.pagerank()[self.log.end_date]
+		graph = st.graphs[self.log.end_date]
+		id = graph.vertex_properties['id']
+		id_invert = {}
+		for v in graph.vertices():
+			id_invert[id[v]] = int(v)
+		print id_invert
+
+		pr_dict = {}
+		for v in graph.vertices():
+			pr_dict[int(id[v])] = pr[v]
+
+		sorted_pr = sorted(pr_dict.values())
+		sorted_id = sorted(pr_dict, key=pr_dict.get)
+
+		K = 1899
+
+		samples_pr = sorted_pr[:]
+		samples_id = sorted_id[:]
+		# samples_pr = sorted_pr[-K:]
+		# samples_id = sorted_id[-K:]
+		# samples_pr = sorted_pr[1800 - K: 1800]
+		# samples_id = sorted_id[1800 - K: 1800]
+		# samples_pr = sorted_pr[1000 - K: 1000]
+		# samples_id = sorted_id[1000 - K: 1000]
+		# samples_pr = sorted_pr[800 - K: 800]
+		# samples_id = sorted_id[800 - K: 800]
+
+		samples_join = []
+		for idx in samples_id:
+			samples_join.append(x[str(idx)])
+
+		print samples_pr
+		print samples_join
+		print samples_id
+
+		rank = st.get_users_rank()
+		date_idx = []
+		pr_ev = []
+		for i in range(K):
+			pr_ev.append([])
+		date = self.log.start_date
+		while date <= self.log.end_date - timedelta(7):
+			date_idx.append((date - self.log.start_date).days)
+			for i in range(K):
+				try:
+					pr_ev[i].append(
+						-rank[date].index(str(samples_id[i])) + \
+						rank[date + timedelta(7)].index(str(samples_id[i])))
+				except:
+					pr_ev[i].append(0)
+			date += timedelta(7)
+		for i in range(K):
+			l = []
+			date_idx_temp = []
+			for j in range(len(pr_ev[i])):
+				l.append(pr_ev[i][j])
+				date_idx_temp.append(date_idx[j])
+			plt.plot(date_idx_temp, l , '.')
+		plt.show()
+
+		interval = timedelta(7)
+		event_snapshot = self.log.get_event_snapshot('week', 'event')
+		date = self.log.start_date
+		data = []
+		while date <= self.log.end_date - timedelta(7):
+			data.append(len(event_snapshot[date]))
+			date += interval
+
+		prch = np.average(pr_ev , axis = 0)
+		print(stats.spearmanr(prch, data))
+		print(stats.pearsonr(prch, data))
+
+		plt.plot([i for i in range(32)], prch)
+		plt.show()
+
+	def freq_pr_corr(self):
+		st = Stat()
+		rank = st.get_users_rank()
+
+		print rank
+
 p = Plot()
-p.pr_msg_received()
+p.freq_pr_corr()
