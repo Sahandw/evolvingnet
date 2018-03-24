@@ -112,6 +112,8 @@ class Sequence:
 		print stats.spearmanr(stats.rankdata(pred,'min') , stats.rankdata(testy,'min'))
 		plt.show()
 
+		print mean_absolute_error(stats.rankdata(pred,'min'), stats.rankdata(testy,'min'))
+
 	def classification_data(self):
 		X, y = self.__create_cumulative_design_matrix__()
 		X, y = self.clean_data(X, y)
