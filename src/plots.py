@@ -404,6 +404,61 @@ class Plot:
 		plt.plot(np.log(rx), 1 - np.log(rcfreq), 'r.')
 		plt.show()
 
+	def pr_new_msgs_received(self):
+		spcorr = {}
+		corr = {}
+		user_new_msg = {}
+		new_weekly_msgs = self.log.get_new_messages_received()
+		st = Stat()
+		rank = st.get_users_rank()
+		event_frequency = self.log.event_frequency('msg','week')
+		for date in rank:
+			wrank = []
+			wnr = []
+			for i, user in enumerate(rank[date]):
+				if i + 1 not in user_new_msg:
+					user_new_msg[i + 1] = 0
+				wrank.append(i + 1)
+				if user in new_weekly_msgs[date]:
+					wnr.append(len(new_weekly_msgs[date][user]))
+					user_new_msg[i+1] += len(new_weekly_msgs[date][user])
+				else:
+					wnr.append(0)
+			spcorr[date] = stats.spearmanr(wnr,wrank)
+			corr[date] = stats.pearsonr(wnr,wrank)
+
+
+
+		x = []
+		y = []
+		for date in sorted(corr.iterkeys()):
+			x.append((date - self.log.start_date).days)
+			y.append(corr[date][0] )
+
+		plt.plot(x, y, 'r.')
+		plt.show()
+
+		x = []
+		y = []
+		for date in sorted(spcorr.iterkeys()):
+			x.append((date - self.log.start_date).days)
+			y.append(spcorr[date][0])
+
+
+		plt.plot(x, y, 'r.')
+		plt.show()
+
+		x ,y = [] , []
+		for user in user_new_msg:
+			x.append(user)
+			y.append(user_new_msg[user])
+		plt.scatter(x,y)
+		plt.show()
+
+
+
+
+
 	def pr_msg_received(self , type = 'r'):
 		spcorr = {}
 		corr = {}
@@ -608,4 +663,4 @@ class Plot:
 
 
 p = Plot()
-p.ten_top_rank()
+p.pr_new_msgs_received()

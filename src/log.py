@@ -381,7 +381,27 @@ class Log:
 		return data
 
 
+	def get_new_messages_received(self):
+		new_weekly_messages = {}
+		prev_msgs = set()
+		msg_snapshot =  self.get_event_snapshot('week','msg')
+		for date in msg_snapshot:
+			new_weekly_messages[date] = {}
+			for entry in msg_snapshot[date]:
+				if (entry[0] , entry[1]) not in prev_msgs:
+					prev_msgs.add((entry[0] , entry[2]))
+					if entry[1] not in new_weekly_messages[date]:
+						new_weekly_messages[date][entry[1]] = [entry[0]]
+					else:
+						new_weekly_messages[date][entry[1]].append(entry[0])
+
+		return new_weekly_messages
 
 
 
 
+
+
+
+# l = Log()
+# l.get_new_messages_received()
