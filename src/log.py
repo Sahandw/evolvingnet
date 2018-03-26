@@ -367,8 +367,19 @@ class Log:
 		else:
 			pickle.dump(user_cs,open(project_folder + 'data/pickles/user_cs_daily.p', 'wb'))
 
+	def event_frequency(self, type='msg', duration='week'):
+		data = []
+		interval = timedelta(7)
+		if duration == 'day': interval = timedelta(1)
+		event_snapshot = self.get_event_snapshot(duration, type)
 
-#l = Log()
+		date = self.start_date
+		while date <= self.end_date:
+			data.append(len(event_snapshot[date]))
+			date += interval
+
+		return data
+
 
 
 

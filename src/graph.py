@@ -6,6 +6,9 @@ from log import Log
 from datetime import timedelta
 import networkx as nx
 import matplotlib.pyplot as plt
+import os
+import pickle
+project_folder = os.path.dirname(__file__).split("src")[0]
 
 
 
@@ -123,6 +126,10 @@ class Stat:
 		self.graphs = gc.create_culumative_graphs()
 
 	def user_pagerank(self):
+		return pickle.load(open(project_folder \
+					+ 'data/pickles/weekly_pr.p', 'rb'))
+
+	def create_user_pagerank(self):
 		pr = {}
 		last_graph = self.graphs[self.gc.end_date]
 		id = last_graph.vertex_properties['id']
@@ -133,16 +140,23 @@ class Stat:
 			for v in g.vertices():
 				temp[id[v]] = prank[v]
 			pr[date] = temp
+		pickle.dump(pr, open(project_folder \
+							 + 'data/pickles/weekly_pr.p', 'wb'))
 		return pr
 
 
-	def get_users_rank(self):
+	def create_users_rank(self):
 		rank = {}
 		prg = self.user_pagerank()
 		for date , pr in prg.iteritems():
 			date_rank = sorted(pr, key=pr.get, reverse=True )
 			rank[date] = date_rank
+		pickle.dump(rank, open(project_folder \
+					+ 'data/pickles/weekly_ranks.p', 'wb'))
 		return rank
+	def get_users_rank(self):
+		return pickle.load(open(project_folder \
+					+ 'data/pickles/weekly_ranks.p', 'rb'))
 
 
 
@@ -194,6 +208,7 @@ class Stat:
 
 
 
-
-# st = Stat('day')
-# st.get_users_rank()
+#
+# st = Stat('week')
+# st.create_user_pagerank()
+# print st.user_pagerank()

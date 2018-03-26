@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from datetime import timedelta
 from log import Log
 from graph import Graph_Creator , Stat
+from sequence import Sequence
 import graph_tool.draw as gtdraw
 import os
 import numpy as np
@@ -484,18 +485,30 @@ class Plot:
 		rank = st.get_users_rank()
 		date_idx = []
 		pr_ev = []
+		pr_inc = []
+		pr_dec = []
 		for i in range(K):
 			pr_ev.append([])
+			pr_inc.append([])
+			pr_dec.append([])
 		date = self.log.start_date
 		while date <= self.log.end_date - timedelta(7):
 			date_idx.append((date - self.log.start_date).days)
 			for i in range(K):
 				try:
-					pr_ev[i].append(
-						-rank[date].index(str(samples_id[i])) + \
-						rank[date + timedelta(7)].index(str(samples_id[i])))
+					change = -rank[date].index(str(samples_id[i])) + \
+					rank[date + timedelta(7)].index(str(samples_id[i]))
+					pr_ev[i].append(change)
+					if change > 0:
+						pr_inc[i].append(change)
+						pr_dec[i].append(0)
+					else:
+						pr_dec[i].append(change)
+						pr_inc[i].append(0)
 				except:
 					pr_ev[i].append(0)
+					pr_dec[i].append(0)
+					pr_inc[i].append(0)
 			date += timedelta(7)
 		for i in range(K):
 			l = []
@@ -503,7 +516,7 @@ class Plot:
 			for j in range(len(pr_ev[i])):
 				l.append(pr_ev[i][j])
 				date_idx_temp.append(date_idx[j])
-			plt.plot(date_idx_temp, l , '.')
+			plt.plot(date_idx_temp, l )
 		plt.show()
 
 		interval = timedelta(7)
@@ -515,17 +528,84 @@ class Plot:
 			date += interval
 
 		prch = np.average(pr_ev , axis = 0)
+		prchp = np.average(pr_inc , axis = 0)
+		prchn = np.average(pr_dec , axis = 0)
 		print(stats.spearmanr(prch, data))
 		print(stats.pearsonr(prch, data))
-
+		print(stats.spearmanr(prchp, data))
+		print(stats.pearsonr(prchp, data))
+		print(stats.spearmanr(prchn, data))
+		print(stats.pearsonr(prchn, data))
 		plt.plot([i for i in range(32)], prch)
+		plt.show()
+		plt.plot([i for i in range(32)], prchp)
+		plt.show()
+		plt.plot([i for i in range(32)], np.abs(prchn))
 		plt.show()
 
 	def freq_pr_corr(self):
 		st = Stat()
 		rank = st.get_users_rank()
 
-		print rank
+		seq = Sequence()
+		kgram_list , kgram_count = seq.create_weekly_sequences()
+
+		scorr = {}
+		pcorr = {}
+		for kgram in kgram_list:
+			scorr[kgram] = {}
+			pcorr[kgram] = {}
+			date = self.log.start_date
+			while date <= self.log.end_date:
+				lrank = []
+				lfreq = []
+				for i, user in enumerate(rank[date]):
+					if user in kgram_count[date]:
+						if kgram in kgram_count[date][user]:
+							lfreq.append(kgram_count[date][user][kgram])
+							lrank.append(i+1)
+				if lrank is not [] and lfreq is not []:
+					scorr[kgram][date] = stats.spearmanr(lfreq,lrank)
+					pcorr[kgram][date] = stats.pearsonr(lfreq,lrank)
+
+
+				date += timedelta(7)
+
+
+		print scorr
+		print pcorr
+
+		for kgram in kgram_list:
+			score = []
+			dates = []
+			for date in scorr[kgram]:
+				if type(scorr[kgram][date][0]) == np.float64\
+						and scorr[kgram][date][0] is not np.nan and \
+								scorr[kgram][date][1] < 0.001:
+					dates.append((date - self.log.start_date).days)
+					score.append(scorr[kgram][date][0])
+			if len(score) > 0:
+				print(kgram)
+				plt.plot(dates, score, '.')
+				plt.show()
+
+
+
+		for kgram in kgram_list:
+			score = []
+			dates = []
+			for date in pcorr[kgram]:
+				if type(pcorr[kgram][date][0]) == np.float64 \
+						and pcorr[kgram][date][0] is not np.nan and\
+							pcorr[kgram][date][1] < 0.001:
+					dates.append((date - self.log.start_date).days)
+					score.append(pcorr[kgram][date][0])
+			if len(score) > 0:
+				print(kgram)
+				plt.plot(dates,score,'.')
+				plt.show()
+
+
 
 p = Plot()
-p.freq_pr_corr()
+p.ten_top_rank()
