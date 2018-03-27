@@ -312,13 +312,14 @@ class Plot:
 		sorted_id = sorted(pr_dict, key=pr_dict.get)
 
 		K = 10
-
+		# samples_pr = sorted_pr[:]
+		# samples_id = sorted_id[:]
 		# samples_pr = sorted_pr[-K:]
 		# samples_id = sorted_id[-K:]
-		samples_pr = sorted_pr[1800 - K: 1800]
-		samples_id = sorted_id[1800 - K: 1800]
-		# samples_pr = sorted_pr[1000 - K: 1000]
-		# samples_id = sorted_id[1000 - K: 1000]
+		# samples_pr = sorted_pr[1800 - K: 1800]
+		# samples_id = sorted_id[1800 - K: 1800]
+		samples_pr = sorted_pr[1000 - K: 1000]
+		samples_id = sorted_id[1000 - K: 1000]
 		# samples_pr = sorted_pr[800 - K: 800]
 		# samples_id = sorted_id[800 - K: 800]
 
@@ -582,6 +583,9 @@ class Plot:
 			data.append(len(event_snapshot[date]))
 			date += interval
 
+		freq = self.log.event_frequency('msg','week')
+
+
 		prch = np.average(pr_ev , axis = 0)
 		prchp = np.average(pr_inc , axis = 0)
 		prchn = np.average(pr_dec , axis = 0)
@@ -591,6 +595,8 @@ class Plot:
 		print(stats.pearsonr(prchp, data))
 		print(stats.spearmanr(prchn, data))
 		print(stats.pearsonr(prchn, data))
+		prchp = prchp / np.array(freq[1:])
+		prchn = prchn / np.array(freq[1:])
 		plt.plot([i for i in range(32)], prch)
 		plt.show()
 		plt.plot([i for i in range(32)], prchp)
@@ -598,7 +604,7 @@ class Plot:
 		plt.plot([i for i in range(32)], np.abs(prchn))
 		plt.show()
 
-	def freq_pr_corr(self):
+	def freq_pr_corr_weekly(self):
 		st = Stat()
 		rank = st.get_users_rank()
 
@@ -610,15 +616,21 @@ class Plot:
 		for kgram in kgram_list:
 			scorr[kgram] = {}
 			pcorr[kgram] = {}
-			date = self.log.start_date
+			date = self.log.start_date + timedelta(7)
 			while date <= self.log.end_date:
 				lrank = []
 				lfreq = []
 				for i, user in enumerate(rank[date]):
-					if user in kgram_count[date]:
-						if kgram in kgram_count[date][user]:
-							lfreq.append(kgram_count[date][user][kgram])
-							lrank.append(i+1)
+					if user in kgram_count[date - timedelta(7)]:
+						if kgram in kgram_count[date -timedelta(7)][user]:
+							lfreq.append(kgram_count[date
+										 -timedelta(7)][user][kgram])
+							if user in rank[date - timedelta(7)]:
+								prank = rank[date - timedelta(7)].index(user)
+								lrank.append(i - prank)
+							else:
+								lrank.append(i + 1)
+
 				if lrank is not [] and lfreq is not []:
 					scorr[kgram][date] = stats.spearmanr(lfreq,lrank)
 					pcorr[kgram][date] = stats.pearsonr(lfreq,lrank)
@@ -641,6 +653,7 @@ class Plot:
 					score.append(scorr[kgram][date][0])
 			if len(score) > 0:
 				print(kgram)
+				print score
 				plt.plot(dates, score, '.')
 				plt.show()
 
@@ -660,7 +673,28 @@ class Plot:
 				plt.plot(dates,score,'.')
 				plt.show()
 
+	def freq_pr_corr(self):
+		scorr = {}
+		s = Sequence()
+		kgram_list , kgram_count =  s.create_k_grams()
+		rank = s.get_weekly_ranks()[self.log.end_date]
+		print rank
+		for kgram in kgram_list:
+			r = []
+			f = []
+			for i,user in enumerate(rank):
+				f.append(kgram_count[user][kgram])
+				r.append(i + 1)
+			scorr[kgram] = stats.spearmanr(r,f)
+		x = []
+		y = []
+		for i, kgram in enumerate(kgram_list):
+			print kgram , scorr[kgram]
+			x.append(i)
+			y.append(scorr[kgram][0])
+		plt.plot(x,y)
+		plt.show()
 
 
 p = Plot()
-p.pr_new_msgs_received()
+p.freq_pr_corr_weekly()

@@ -35,7 +35,7 @@ class Sequence:
 	def get_weekly_ranks(self):
 		return pickle.load(open(project_folder \
 								+ 'data/pickles/weekly_ranks.p', 'rb'))
-	def __create_k_grams__(self , k = 5):
+	def create_k_grams(self , k = 5):
 
 		kgram_set = set()
 		kgram_count = {}
@@ -56,7 +56,7 @@ class Sequence:
 
 
 	def __create_cumulative_design_matrix__(self):
-		kgram_list , kgram_count = self.__create_k_grams__()
+		kgram_list , kgram_count = self.create_k_grams()
 
 		n = len(kgram_count.keys())
 		X = np.zeros((n , len(kgram_list)))
@@ -74,7 +74,7 @@ class Sequence:
 
 	def freq_pattern(self):
 		patterns = {}
-		kgram_list, kgram_count = self.__create_k_grams__()
+		kgram_list, kgram_count = self.create_k_grams()
 		for gram in kgram_list:
 			patterns[gram] = 0
 		X , y = self.__create_cumulative_design_matrix__()
@@ -348,6 +348,16 @@ class Sequence:
 		pred2 = model.predict(X)
 		return np.mean(np.array(pred2) == np.array(y))\
 			, np.mean(np.array(pred) == np.array(testy))
+
+
+
+#
+# s = Sequence()
+# s.predict_pagerank()
+# s.classify_pr()
+
+
+
 
 # #
 # s = Sequence()

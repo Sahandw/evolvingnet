@@ -404,4 +404,4 @@ class Log:
 
 
 # l = Log()
-# l.get_new_messages_received()
+# l.__create_user_symbolic_sequence__()
