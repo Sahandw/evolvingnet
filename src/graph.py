@@ -109,9 +109,9 @@ class Graph_Creator:
 
 
 
-gc = Graph_Creator('week')
-
-#print gc.create_culumative_graphs()
+# gc = Graph_Creator('week')
+#
+# print gc.create_culumative_graphs()
 
 
 
@@ -123,7 +123,7 @@ gc = Graph_Creator('week')
 class Stat:
 	def __init__(self , dur = 'week'):
 		self.gc = Graph_Creator(dur)
-		self.graphs = gc.create_culumative_graphs()
+		self.graphs = self.gc.create_culumative_graphs()
 
 	def user_pagerank(self):
 		return pickle.load(open(project_folder \
@@ -138,10 +138,11 @@ class Stat:
 			temp = {}
 			g = self.graphs[date]
 			for v in g.vertices():
-				temp[id[v]] = prank[v]
+				if prank[v] > 0:
+					temp[id[v]] = prank[v]
 			pr[date] = temp
 		pickle.dump(pr, open(project_folder \
-							 + 'data/pickles/weekly_pr.p', 'wb'))
+						+ 'data/pickles/weekly_pr.p', 'wb'))
 		return pr
 
 
@@ -207,8 +208,7 @@ class Stat:
 
 
 
-
 #
-# st = Stat('week')
+# st = Stat()
 # st.create_user_pagerank()
-# print st.user_pagerank()
+# st.create_users_rank()

@@ -6,15 +6,16 @@ project_folder = os.path.dirname(__file__).split("src")[0]
 
 class Log:
 	def __init__(self):
+		self.start_date = datetime(2004, 3, 22, 00, 00, 00)
+		#self.end_date = datetime(2004, 11, 1, 00, 00, 00)
+		self.end_date = self.start_date + timedelta(7*20)
+
 		with open(project_folder + 'data/data.txt')as f:
 			self.raw_events = f.readlines()
 		f.close()
 
 		self.event_log = self.__create_log__()
 		self.node_log  , self.msg_log = self.__create_node_and_message_event_log()
-
-		self.start_date = datetime(2004, 3, 22, 00, 00, 00)
-		self.end_date = datetime(2004, 11, 1, 00, 00, 00)
 
 
 
@@ -24,8 +25,9 @@ class Log:
 			l = entry.split(' ')
 			t = (l[0] + ' ' + l[1]).replace('\"', '')
 			t = datetime.strptime(t, '%Y-%m-%d %H:%M:%S')
-			u, v, c = l[2], l[3], l[4].replace('\n', '')
-			log.append((u, v, t, c))
+			if t <= self.end_date:
+				u, v, c = l[2], l[3], l[4].replace('\n', '')
+				log.append((u, v, t, c))
 		return log
 
 
@@ -56,12 +58,13 @@ class Log:
 
 		for entry in self.node_log:
 			t = entry[1]
-			week = (t - timedelta(t.weekday())).replace(hour=00, minute=00, second=00)
-			day = t.replace(hour=00, minute=00, second=00)
-			if duration == 'day':
-				join_snapshot[day].append(entry)
-			if duration == 'week':
-				join_snapshot[week].append(entry)
+			if t <= self.end_date:
+				week = (t - timedelta(t.weekday())).replace(hour=00, minute=00, second=00)
+				day = t.replace(hour=00, minute=00, second=00)
+				if duration == 'day':
+					join_snapshot[day].append(entry)
+				if duration == 'week':
+					join_snapshot[week].append(entry)
 
 
 		return join_snapshot
@@ -80,12 +83,13 @@ class Log:
 
 		for entry in self.msg_log:
 			t = entry[2]
-			week = (t - timedelta(t.weekday())).replace(hour=00, minute=00, second=00)
-			day = t.replace(hour=00, minute=00, second=00)
-			if duration == 'day':
-				msg_snapshot[day].append(entry)
-			if duration == 'week':
-				msg_snapshot[week].append(entry)
+			if t <= self.end_date:
+				week = (t - timedelta(t.weekday())).replace(hour=00, minute=00, second=00)
+				day = t.replace(hour=00, minute=00, second=00)
+				if duration == 'day':
+					msg_snapshot[day].append(entry)
+				if duration == 'week':
+					msg_snapshot[week].append(entry)
 
 		return msg_snapshot
 
@@ -101,12 +105,13 @@ class Log:
 
 		for entry in self.event_log:
 			t = entry[2]
-			week = (t - timedelta(t.weekday())).replace(hour=00, minute=00, second=00)
-			day = t.replace(hour=00, minute=00, second=00)
-			if duration == 'day':
-				event_snapshot[day].append(entry)
-			if duration == 'week':
-				event_snapshot[week].append(entry)
+			if t <= self.end_date:
+				week = (t - timedelta(t.weekday())).replace(hour=00, minute=00, second=00)
+				day = t.replace(hour=00, minute=00, second=00)
+				if duration == 'day':
+					event_snapshot[day].append(entry)
+				if duration == 'week':
+					event_snapshot[week].append(entry)
 
 		return event_snapshot
 
@@ -402,6 +407,11 @@ class Log:
 
 
 
-
 # l = Log()
+# l.create_snapshot_pickles()
+# l.__create_user_event_sequence__()
 # l.__create_user_symbolic_sequence__()
+# l.create_user_cumulative_events()
+# l.create_user_cumulative_seq()
+# l.create_user_date_events()
+# l.create_user_date_seq()

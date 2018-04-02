@@ -6,7 +6,7 @@ from sequence import Sequence
 import graph_tool.draw as gtdraw
 import os
 import numpy as np
-
+import matplotlib.patches as mps
 from scipy import stats
 
 from collections import Counter
@@ -57,7 +57,7 @@ class Plot:
 		for i ,date in enumerate(sorted_dates):
 			pos = gtdraw.sfdp_layout(graphs[date])
 			gtdraw.graph_draw(graphs[date] , pos = pos ,
-					  output= project_folder + 'outputs/' + d + '/' + str(i) + '.png')
+							  output= project_folder + 'outputs/' + d + '/' + str(i) + '.png')
 
 
 		# Can I visualize just the nodes with more than something degree for better
@@ -83,6 +83,8 @@ class Plot:
 		# ult_pgr = ult_pgr[1:]
 
 		plt.plot(join_since , ult_pgr , 'r.')
+		plt.xlabel('Day of joining ')
+		plt.ylabel('Value of page rank')
 		plt.show()
 
 		# stat tests demo
@@ -253,10 +255,13 @@ class Plot:
 		sorted_pr = sorted(pr_dict.values())
 		sorted_id = sorted(pr_dict, key=pr_dict.get)
 
-		K = 10
+
 
 		samples_pr = sorted_pr[20:30]
 		samples_id = sorted_id[20:30]
+
+		K = len(samples_id)
+
 		samples_join = []
 		for idx in samples_id:
 			samples_join.append(x[str(idx)])
@@ -288,7 +293,7 @@ class Plot:
 
 		for i in range(K):
 			plt.plot(date_idx , pr_ev[i])
-			#print pr_ev[i]
+		#print pr_ev[i]
 		#plt.ylim([0,0.0002])
 		plt.show()
 
@@ -311,17 +316,18 @@ class Plot:
 		sorted_pr = sorted(pr_dict.values())
 		sorted_id = sorted(pr_dict, key=pr_dict.get)
 
-		K = 10
+		K = 20
+
 		# samples_pr = sorted_pr[:]
 		# samples_id = sorted_id[:]
 		# samples_pr = sorted_pr[-K:]
 		# samples_id = sorted_id[-K:]
-		# samples_pr = sorted_pr[1800 - K: 1800]
-		# samples_id = sorted_id[1800 - K: 1800]
 		samples_pr = sorted_pr[1000 - K: 1000]
 		samples_id = sorted_id[1000 - K: 1000]
 		# samples_pr = sorted_pr[800 - K: 800]
 		# samples_id = sorted_id[800 - K: 800]
+
+		K = len(samples_id)
 
 		samples_join = []
 		for idx in samples_id:
@@ -420,40 +426,60 @@ class Plot:
 				if i + 1 not in user_new_msg:
 					user_new_msg[i + 1] = 0
 				wrank.append(i + 1)
-				if user in new_weekly_msgs[date]:
-					wnr.append(len(new_weekly_msgs[date][user]))
-					user_new_msg[i+1] += len(new_weekly_msgs[date][user])
-				else:
-					wnr.append(0)
-			spcorr[date] = stats.spearmanr(wnr,wrank)
-			corr[date] = stats.pearsonr(wnr,wrank)
+				if date in new_weekly_msgs:
+					if user in new_weekly_msgs[date]:
+						wnr.append(len(new_weekly_msgs[date][user]))
+						user_new_msg[i+1] += len(new_weekly_msgs[date][user])
+					else:
+						wnr.append(0)
+			if len(wnr) == len(wrank):
+				spcorr[date] = stats.spearmanr(wnr,wrank)
+				corr[date] = stats.pearsonr(wnr,wrank)
 
 
-
-		x = []
-		y = []
-		for date in sorted(corr.iterkeys()):
-			x.append((date - self.log.start_date).days)
-			y.append(corr[date][0] )
-
-		plt.plot(x, y, 'r.')
-		plt.show()
+		#
+		# x = []
+		# y = []
+		# for date in sorted(corr.iterkeys()):
+		# 	x.append((date - self.log.start_date).days)
+		# 	y.append(corr[date][0] )
+		#
+		# plt.plot(x, y, 'r.')
+		# plt.show()
 
 		x = []
 		y = []
 		for date in sorted(spcorr.iterkeys()):
-			x.append((date - self.log.start_date).days)
-			y.append(spcorr[date][0])
+			if spcorr[date][0] < 0.5:
+				x.append((date - self.log.start_date).days)
+				y.append(spcorr[date][0])
 
 
-		plt.plot(x, y, 'r.')
+		new, = plt.plot(x, y, 'g')
+		plt.xlabel('Day from inception')
+		plt.ylabel('Spearman correlation')
+		plt.title('Spearman correlation between page rank and number ' +\
+				  'of\n new messages received through out time')
+		plt.margins(0.05)
+
+		# x, y = self.pr_msg_received()
+		# total, = plt.plot(x,y, 'r')
+
+
+
 		plt.show()
 
 		x ,y = [] , []
-		for user in user_new_msg:
+		for user in sorted(user_new_msg.keys() , key = lambda x: int(x)):
 			x.append(user)
 			y.append(user_new_msg[user])
-		plt.scatter(x,y)
+		print np.max(y)
+
+		plt.hist(y,x ,normed=False)
+		plt.title('Total number of new messages received by each rank through out time')
+		plt.xlabel('Pagerank')
+		plt.ylabel('Number of new messages received')
+		plt.margins(0.05)
 		plt.show()
 
 
@@ -479,14 +505,16 @@ class Plot:
 				corr[date] = stats.pearsonr(weekly_rank , weekly_r_count)
 				spcorr[date] = stats.spearmanr(weekly_rank, weekly_r_count)
 
-		x = []
-		y = []
-		for date in sorted(corr.iterkeys()):
-			x.append((date - self.log.start_date).days)
-			y.append(corr[date][0])
+		# x = []
+		# y = []
+		# for date in sorted(corr.iterkeys()):
+		# 	x.append((date - self.log.start_date).days)
+		# 	y.append(corr[date][0])
+		#
+		# plt.plot(x,y , 'r.')
+		# plt.show()
 
-		plt.plot(x,y , 'r.')
-		plt.show()
+
 
 		x = []
 		y = []
@@ -494,10 +522,10 @@ class Plot:
 			x.append((date - self.log.start_date).days)
 			y.append(spcorr[date][0])
 
-		plt.plot(x, y, 'r.')
-		plt.show()
+		# plt.plot(x, y, 'r.')
+		# plt.show()
 
-
+		return x , y
 
 	def top_ten_change_in_pr(self):
 		x = self.log.join_date_since_inception()
@@ -517,7 +545,7 @@ class Plot:
 		sorted_pr = sorted(pr_dict.values())
 		sorted_id = sorted(pr_dict, key=pr_dict.get)
 
-		K = 1899
+		K = 10
 
 		samples_pr = sorted_pr[:]
 		samples_id = sorted_id[:]
@@ -529,6 +557,8 @@ class Plot:
 		# samples_id = sorted_id[1000 - K: 1000]
 		# samples_pr = sorted_pr[800 - K: 800]
 		# samples_id = sorted_id[800 - K: 800]
+
+		K = len(samples_id)
 
 		samples_join = []
 		for idx in samples_id:
@@ -553,7 +583,7 @@ class Plot:
 			for i in range(K):
 				try:
 					change = -rank[date].index(str(samples_id[i])) + \
-					rank[date + timedelta(7)].index(str(samples_id[i]))
+							 rank[date + timedelta(7)].index(str(samples_id[i]))
 					pr_ev[i].append(change)
 					if change > 0:
 						pr_inc[i].append(change)
@@ -597,11 +627,11 @@ class Plot:
 		print(stats.pearsonr(prchn, data))
 		prchp = prchp / np.array(freq[1:])
 		prchn = prchn / np.array(freq[1:])
-		plt.plot([i for i in range(32)], prch)
+		plt.plot([i for i in range(len(prch))], prch)
 		plt.show()
-		plt.plot([i for i in range(32)], prchp)
+		plt.plot([i for i in range(len(prchp))], prchp)
 		plt.show()
-		plt.plot([i for i in range(32)], np.abs(prchn))
+		plt.plot([i for i in range(len(prchp))], np.abs(prchn))
 		plt.show()
 
 	def freq_pr_corr_weekly(self):
@@ -624,7 +654,7 @@ class Plot:
 					if user in kgram_count[date - timedelta(7)]:
 						if kgram in kgram_count[date -timedelta(7)][user]:
 							lfreq.append(kgram_count[date
-										 -timedelta(7)][user][kgram])
+													 -timedelta(7)][user][kgram])
 							if user in rank[date - timedelta(7)]:
 								prank = rank[date - timedelta(7)].index(user)
 								lrank.append(i - prank)
@@ -646,7 +676,7 @@ class Plot:
 			score = []
 			dates = []
 			for date in scorr[kgram]:
-				if type(scorr[kgram][date][0]) == np.float64\
+				if type(scorr[kgram][date][0]) == np.float64 \
 						and scorr[kgram][date][0] is not np.nan and \
 								scorr[kgram][date][1] < 0.001:
 					dates.append((date - self.log.start_date).days)
@@ -664,8 +694,8 @@ class Plot:
 			dates = []
 			for date in pcorr[kgram]:
 				if type(pcorr[kgram][date][0]) == np.float64 \
-						and pcorr[kgram][date][0] is not np.nan and\
-							pcorr[kgram][date][1] < 0.001:
+						and pcorr[kgram][date][0] is not np.nan and \
+								pcorr[kgram][date][1] < 0.001:
 					dates.append((date - self.log.start_date).days)
 					score.append(pcorr[kgram][date][0])
 			if len(score) > 0:
@@ -695,6 +725,164 @@ class Plot:
 		plt.plot(x,y)
 		plt.show()
 
+	def get_bins(self , num , l):
+		per = []
+		minl = min(l)
+		maxl = max(l)
+		inc = ( maxl - minl ) / num
+		for i in range(1,num + 1):
+			per.append( minl + i * inc)
+		#
+		# for i in range(start, 100, inc):
+		# 	per.append(np.percentile(l, i))
+		return per
+	def get_bin_group(self , x , l):
+		for i in range(len(l)):
+			if x < l[i]:
+				return i
+		return len(l)
+
+	def get_rep(self , pr , per):
+		rep = np.zeros(len(per) + 1)
+		c =  np.zeros(len(per) + 1)
+		for v in pr:
+			group =  self.get_bin_group(v,per)
+			rep[group] += v
+			c[group] += 1
+		for i in range(len(rep)):
+			if c[i] == 0:
+				rep[i] = per[i]
+			else:
+				rep[i] /= c[i]
+		return rep
+
+	def cal_log_pr(self , pr, c = 1e8):
+		if type(pr) == list:
+			return np.log(np.array(pr) * c)
+		return np.log(pr *c)
+
+
+
+
+
+	def matthew_effect(self):
+		st = Stat()
+		final_pr = st.user_pagerank()[self.log.end_date]
+		log_pr= self.cal_log_pr(final_pr.values())
+		per = self.get_bins(70 , log_pr)
+		rep = self.get_rep(log_pr , per)
+		print rep
+
+		pr = st.user_pagerank()
+		date = self.log.start_date
+		pch = np.zeros(len(rep))
+		pcount = np.zeros(len(rep))
+		nch = np.zeros(len(rep))
+		ncount = np.zeros(len(rep))
+		change = np.zeros(len(rep))
+		count = np.zeros(len(rep))
+		rel_prob = np.zeros(len(rep))
+
+		while date < self.log.end_date:
+			for user in pr[date]:
+				g = self.get_bin_group(
+					self.cal_log_pr(pr[date][user]), per)
+				if user not in pr[date + timedelta(7)]:
+					nch[g] +=  pr[date][user]
+					ncount[g] += 1
+					change[g] += pr[date][user]
+					count[g] += 1
+					continue
+				ch = pr[date + timedelta(7)][user] - pr[date][user]
+				if ch >= 0:
+					pch[g] += ch
+					pcount[g] += 1
+				if ch < 0:
+					nch[g] += abs(ch)
+					ncount[g] += 1
+				change[g] += pr[date][user]
+				count[g] += 1
+			date += timedelta(7)
+
+
+
+		for i in range(len(pch)):
+			pch[i] /= pcount[i]
+			nch[i] /= ncount[i]
+			change[i] /= count[i]
+		nch = self.cal_log_pr(nch)
+		pch = self.cal_log_pr(pch)
+		change = self.cal_log_pr(change)
+
+
+
+		print np.polyfit(rep, nch ,1)
+		print np.polyfit(rep, pch,1 )
+		print np.polyfit(rep, change , 1)
+		pp = np.poly1d(np.polyfit(rep,pch,1))
+		nn = np.poly1d(np.polyfit(rep,nch,1))
+		changep = np.poly1d(np.polyfit(rep,change,1))
+		xp = np.linspace(np.min(rep) , np.max(rep), 100)
+		plt.plot(rep, pch , '.' , xp, pp(xp), '-')
+		plt.show()
+		plt.plot(rep, nch, '.', xp, nn(xp), '-')
+		plt.show()
+		plt.plot(rep,change,'.' , xp, changep(xp) , '-')
+		plt.show()
+		# print rep, nch
+
+	def pr_bin_dist(self):
+		st = Stat()
+		final_pr = st.user_pagerank()[self.log.end_date]
+		log_pr= self.cal_log_pr(final_pr.values())
+		per = self.get_bins(70 , log_pr)
+		rep = self.get_rep(log_pr, per)
+		count = np.zeros(len(rep))
+		cdf = np.zeros(len(rep))
+		for pr in final_pr.values():
+			g = self.get_bin_group(self.cal_log_pr(pr), per)
+			count[g] += 1
+		for i in range(len(count)):
+			if i == 0:
+				cdf[i] = count[i]
+			cdf[i] = count[i] + cdf[i - 1]
+
+		print cdf
+		count = self.cal_log_pr(count)
+		cdf = self.cal_log_pr(cdf)
+		count , rep_cleaned = self.clean_lists(count, rep)
+		xp = np.linspace(np.min(rep_cleaned), np.max(rep_cleaned), 100)
+		print np.polyfit(rep_cleaned, count, 1)
+		cc = np.poly1d(np.polyfit(rep_cleaned, count, 1))
+		plt.plot(rep_cleaned, count, '.', xp, cc(xp), '-')
+		plt.show()
+
+		cdf , rep_cleaned = self.clean_lists(cdf, rep)
+
+		print np.polyfit(rep_cleaned, 1 - cdf, 1)
+		cc = np.poly1d(np.polyfit(rep_cleaned, 1 - cdf, 1))
+		plt.plot(rep_cleaned,  1- cdf , '.', xp, cc(xp), '-')
+		plt.show()
+
+
+	def clean_lists(self, count , rep):
+		c = []
+		r = []
+		for i in range(len(rep)):
+			if count[i] > 0 :
+				c.append(count[i])
+				r.append(rep[i])
+		return np.array(c) , np.array(r)
+
+
 
 p = Plot()
-p.freq_pr_corr_weekly()
+p.freq_pr_corr()
+# p.join_date_final_pagerank()
+# p.pr_new_msgs_received()
+# p.matthew_effect()
+# p.pr_distr()
+# p.pr_bin_dist()
+# p.join_date_final_pagerank()
+# p.freq_pr_corr()
+# p.freq_pr_corr_weekly()
