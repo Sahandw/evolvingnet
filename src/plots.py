@@ -82,7 +82,18 @@ class Plot:
 		# join_since = join_since[1:]
 		# ult_pgr = ult_pgr[1:]
 
-		plt.plot(join_since , ult_pgr , 'r.')
+		#plt.plot(join_since , ult_pgr , 'r.')
+		#data = [join_since , ult_pgr]
+
+		data = []
+		for i in sorted(list(set(join_since))):
+			d = []
+			for j in range(len(join_since)):
+				if join_since[j] == i:
+					d.append(ult_pgr[i])
+			data.append(d)
+		plt.boxplot(data)
+
 		plt.xlabel('Day of joining ')
 		plt.ylabel('Value of page rank')
 		plt.show()
@@ -706,7 +717,7 @@ class Plot:
 	def freq_pr_corr(self):
 		scorr = {}
 		s = Sequence()
-		kgram_list , kgram_count =  s.create_k_grams()
+		kgram_list , kgram_count =  s.create_k_grams(3)
 		rank = s.get_weekly_ranks()[self.log.end_date]
 		print rank
 		for kgram in kgram_list:
@@ -715,13 +726,18 @@ class Plot:
 			for i,user in enumerate(rank):
 				f.append(kgram_count[user][kgram])
 				r.append(i + 1)
-			scorr[kgram] = stats.spearmanr(r,f)
+			scorr[kgram] = stats.pearsonr(r,f)
 		x = []
 		y = []
 		for i, kgram in enumerate(kgram_list):
 			print kgram , scorr[kgram]
-			x.append(i)
-			y.append(scorr[kgram][0])
+			if scorr[kgram][0] < -0.5 and scorr[kgram][1] < 0.001:
+				x.append(i)
+				y.append(scorr[kgram][0])
+		l = []
+		for i in x:
+			l.append(''.join(list(kgram_list[i])))
+		plt.xticks(x , l)
 		plt.plot(x,y)
 		plt.show()
 
@@ -877,7 +893,7 @@ class Plot:
 
 
 p = Plot()
-p.freq_pr_corr()
+# p.freq_pr_corr()
 # p.join_date_final_pagerank()
 # p.pr_new_msgs_received()
 # p.matthew_effect()

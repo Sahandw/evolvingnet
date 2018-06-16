@@ -32,11 +32,11 @@ class Sequence:
 
 	def user_pagerank(self):
 		return pickle.load(open(project_folder \
-					+ 'data/pickles/weekly_pr.p', 'rb'))
+								+ 'data/pickles/weekly_pr.p', 'rb'))
 
 	def get_weekly_ranks(self):
 		return pickle.load(open(project_folder \
-					+ 'data/pickles/weekly_ranks.p', 'rb'))
+								+ 'data/pickles/weekly_ranks.p', 'rb'))
 	def create_k_grams(self , k = 5):
 
 		kgram_set = set()
@@ -146,13 +146,14 @@ class Sequence:
 
 
 		plt.plot([i for i in range (len(testy))], stats.rankdata(pred,'min')
-				 					- stats.rankdata(testy,'min') )
+				 - stats.rankdata(testy,'min') )
 		print stats.spearmanr(stats.rankdata(pred,'min') , stats.rankdata(testy,'min'))
 		plt.show()
 
 		print mean_absolute_error(stats.rankdata(pred,'min'), stats.rankdata(testy,'min'))
 
 	def classification_data(self ,  X = None , y = None , k = 5 ):
+
 		if X is None and y is None:
 			X, y = self.__create_cumulative_design_matrix__(k)
 		X, y = self.clean_data(X, y)
@@ -178,16 +179,28 @@ class Sequence:
 		return model.transform(X) , model.transform(testX)
 
 
+
 	def classify_pr(self , k = 5):
+		kgram_list, kgram_count = s.create_k_grams(k=k)
 		X, testX, y, testy = self.classification_data(k=k)
-		sumX, sumtestX = np.sum(X,axis=1).reshape(-1,1),\
+		sumX, sumtestX = np.sum(X,axis=1).reshape(-1,1), \
 						 np.sum(testX,axis = 1).reshape(-1,1)
 		#X , testX = self.dimentionality_reduction(X,testX)
 		model = RandomForestClassifier(n_estimators=500 ,max_depth=30
 									   , min_samples_split=7)
 
-		X, y = np.concatenate((X,testX) , axis= 0),\
-				np.concatenate((y,testy) , axis = 0)
+
+		model.fit(X,y)
+		fi = model.feature_importances_
+
+
+
+
+
+		X, y = np.concatenate((X,testX) , axis= 0), \
+			   np.concatenate((y,testy) , axis = 0)
+
+
 		sX  = np.concatenate((sumX,sumtestX) , axis=0 )
 
 		error =  cross_val_score(model, X, y ,cv= 4, scoring='neg_mean_absolute_error').mean()
@@ -196,31 +209,57 @@ class Sequence:
 		# print cross_val_score(model, sX, y , cv = 4 , scoring= 'neg_mean_absolute_error').mean()
 		# print cross_val_score(model, sX,y , cv = 4 , scoring='f1_weighted')
 
+
+
+		x = [i for i in range(len(fi))]
+		for i in range(len(kgram_list)):
+			for j in range(i+1 , len(x)):
+				if fi[i] < fi[j]:
+					fi[i] , fi[j] = fi[j], fi[i]
+					x[i] , x[j] = x[j] , x[i]
+
+		plt.bar([i for i in range(len(fi))],fi , align = 'center')
+		plt.xticks( x,  [''.join(list(i)) for i in kgram_list])
+		plt.show()
+
+		from sklearn.cross_validation import ShuffleSplit
+		from sklearn.metrics import mean_absolute_error
+		from collections import defaultdict
+
+		scores = defaultdict(list)
+		for train_idx, test_idx in ShuffleSplit(len(X), 25, 0.4):
+			trainX, testX = X[train_idx] , X[test_idx]
+			trainy, testy = y[train_idx] , y[test_idx]
+			r = model.fit(trainX , trainy)
+			acc = mean_absolute_error(testy , model.predict(testX))
+			for i in  range(X.shape[1]):
+				tX = testX.copy()
+				np.random.shuffle(tX[:,i])
+				shuff_acc = mean_absolute_error(testy ,  model.predict(tX))
+				#print i , kgram_list[i] , (acc - shuff_acc )/acc
+				scores[kgram_list[i]].append(-(acc - shuff_acc))
+		mdafi =  sorted([(round(np.mean(score), 4), feat) for
+					  feat, score in scores.items()], reverse=True)
+
+		xticks = []
+		y = []
+		for el in mdafi:
+			xticks.append(''.join(list(el[1])))
+			y.append(el[0])
+		print xticks
+		print y
+
+
+
+		plt.bar([i for i in range(len(y))] , y , align = 'center')
+		plt.ylim([0, 0.26])
+		plt.xticks([i for i in range(len(y))] , xticks)
+		plt.show()
+
+
+
 		return - error
 
-		#model = MLPClassifier((100,))
-		# model.fit(X,y)
-		# pred = model.predict(testX)
-		# pred2 = model.predict(X)
-		# print np.mean(np.array(pred2) == np.array(y))
-		# print np.mean(np.array(pred) == np.array(testy))
-		# print np.mean(np.abs(np.array(pred) - np.array(testy)))
-		# print confusion_matrix(pred , testy)
-		# miss = 0
-		# for i in range(len(pred)):
-		# 	miss += np.abs( pred[i] - testy[i])
-		# print  miss
-		# model.fit(sumX,y)
-		# pred = model.predict(sumtestX)
-		# pred2 = model.predict(sumX)
-		# print np.mean(np.array(pred2) == np.array(y))
-		# print np.mean(np.array(pred) == np.array(testy))
-		# print np.mean(np.abs(np.array(pred) - np.array(testy)))
-		# print confusion_matrix(pred, testy)
-		# miss = 0
-		# for i in range(len(pred)):
-		# 	miss += np.abs(pred[i] - testy[i])
-		# print  miss
 
 
 	def create_weekly_sequences(self , k = 5):
@@ -241,18 +280,18 @@ class Sequence:
 					kgram_count[date][user] = Counter(l)
 
 		pickle.dump(sorted(list(kgram_set)), open(project_folder \
-					+ 'data/pickles/kgram_list'+str(k)+'.p', 'wb'))
+												  + 'data/pickles/kgram_list'+str(k)+'.p', 'wb'))
 		pickle.dump(kgram_count, open(project_folder \
-				+ 'data/pickles/kgram_count'+str(k)+'.p', 'wb'))
+									  + 'data/pickles/kgram_count'+str(k)+'.p', 'wb'))
 		self.kgram_count = kgram_count
 		self.kgram_list = sorted(list(kgram_set))
 		return sorted(list(kgram_set)) , kgram_count
 
 	def get_weekly_seq(self , k = 5):
 		return pickle.load(open(project_folder \
-			+ 'data/pickles/kgram_list' + str(k) + '.p', 'wb')) , \
-			pickle.load(open(project_folder \
-				+ 'data/pickles/kgram_count' + str(k) + '.p', 'wb'))
+								+ 'data/pickles/kgram_list' + str(k) + '.p', 'wb')) , \
+			   pickle.load(open(project_folder \
+								+ 'data/pickles/kgram_count' + str(k) + '.p', 'wb'))
 
 	def date_week(self ,date, start):
 		return (date - start).days/7
@@ -302,7 +341,7 @@ class Sequence:
 		print explained_variance_score(testy,pred)
 		print explained_variance_score(y, pred_train)
 
-		return dcg_score(testy,pred) ,\
+		return dcg_score(testy,pred) , \
 			   explained_variance_score(testy,pred)
 
 	def kendall(self , model,  testX , testy):
@@ -329,7 +368,7 @@ class Sequence:
 						pd = kgram_list.index(p)
 						X[id , pd] += freq[date][user][p]
 		X,testX,y,testy = self.__create_training_test_set(X,y)
-		wholeX, wholey = np.concatenate((X,testX) , axis = 0)\
+		wholeX, wholey = np.concatenate((X,testX) , axis = 0) \
 			, np.concatenate((y, testy) , axis = 0)
 		wholeX , wholey = self.clean_data(wholeX, wholey)
 		sumwholeX = np.sum(wholeX, axis = 1).reshape(-1,1)
@@ -344,12 +383,13 @@ class Sequence:
 		# 		stats.kendalltau(pred,testy)[0]
 
 		return cross_val_score(model , wholeX,wholey , cv = 5
-							   , scoring=self.kendall ).mean() ,\
-			cross_val_score(model, sumwholeX , wholey , cv = 5,
-							scoring=self.kendall).mean()
+							   , scoring=self.kendall ).mean() , \
+			   cross_val_score(model, sumwholeX , wholey , cv = 5,
+							   scoring=self.kendall).mean()
 
-		# return stats.spearmanr(pred,testy)[0],\
-		# 		stats.kendalltau(pred,testy)[0]
+	# return stats.spearmanr(pred,testy)[0],\
+	# 		stats.kendalltau(pred,testy)[0]
+
 
 	def cumulative_classification(self, start , end):
 		kgram_list, freq = self.kgram_list, self.kgram_count
@@ -381,13 +421,24 @@ class Sequence:
 			   np.concatenate((y, testy), axis=0)
 		sX = np.concatenate((sumX, sumtestX), axis=0)
 
-		if X.shape[0] < 10: return 0,0
-		return -cross_val_score(model, X, y, cv=4,
-					scoring='neg_mean_absolute_error').mean(), \
+
+		if X.shape[0] < 10: return 0,0,0
+		return -cross_val_score(Baseline() , X, y , cv=4 , scoring='neg_mean_absolute_error').mean(),\
+		 -cross_val_score(model, X, y, cv=4,
+								scoring='neg_mean_absolute_error').mean(), \
 			   -cross_val_score(model, sX, y, cv=4,
-					scoring='neg_mean_absolute_error').mean()
+								scoring='neg_mean_absolute_error').mean()
 
 
+import sklearn
+class Baseline(sklearn.base.BaseEstimator):
+	def __init__(self):
+		super(Baseline, self).__init__()
+	def fit(self , X ,y):
+		self.y = list(y)
+		#return max(set(y) , key = y.count)
+	def predict(self, X):
+		return max(set(self.y), key=self.y.count) * np.ones(X.shape[0])
 #
 # # # cumulative prediction
 def run_prediction():
@@ -421,6 +472,7 @@ def run_classification( c = 0):
 	freq = s.log.event_frequency('msg','week')
 	l = []
 	k = []
+	b = []
 	d = []
 	date = s.log.start_date
 	i = 0
@@ -430,10 +482,11 @@ def run_classification( c = 0):
 		if c == 1:
 			r = s.cumulative_classification(s.log.start_date \
 											+ timedelta(7), date + timedelta(7))
-		l.append(r[0])
-		k.append(r[1])
+		b.append(r[0])
+		l.append(r[1])
+		k.append(r[2])
 		d.append((date - s.log.start_date).days / 7)
-		print date ,r[0],r[1]  , freq[i]
+		print date ,r[0],r[1] , r[2] , freq[i]
 		i += 1
 		date += timedelta(7)
 
@@ -444,20 +497,23 @@ def run_classification( c = 0):
 	l = l[num_of_zeros:]
 	d = d[num_of_zeros:]
 	k = k[num_of_zeros:]
+	b = b[num_of_zeros:]
 
-	plt.plot(d,l , 'r')
+	plt.plot(d,l , 'g')
 	plt.ylabel('Absolute mean error')
 	plt.xlabel('Week since inception')
-	plt.plot(d,k, 'g')
+	plt.plot(d,k, 'b')
+	plt.plot(d,b,'r')
 	plt.show()
 
 
 
 s = Sequence()
 # run_prediction()
-# run_classification(c = 1)
+run_classification(c = 1)
 # s.predict_pagerank()
-#s.classify_pr(k = 3)
+# s.classify_pr(k = 3)
+
 
 def effect_of_k():
 	d = []
